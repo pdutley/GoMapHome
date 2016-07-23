@@ -1,0 +1,67 @@
+<html>
+	<head>
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="stylesheet" type="text/css" href="stylesheets/style.css"	>
+	</head>
+	<body>
+		<div class="header">
+			<h1>Pokemon Go Map</h1>
+			<h2 class="subtitle">Please enter your location</h2>
+		</div>
+		<div class="content">
+			<form action="/map" method="post">
+				<div class="input-group">
+					<label for="location-input">Location</label>
+					<input type="text" id="locBox" name="location-input">
+				</div>
+				<input type="submit" value="GO!"/>
+			</form>
+			<div class="examples">
+				<p>Location Examples:</p>
+				<ul>
+					<li>St. Louis, MO</li>
+					<li>Longitued, Latitude</li>
+					<li>123 Example Road, Nowhere KS</li>
+				</ul>
+				<h3>OR</h3>
+				<div>
+					<button onclick="getLocation()">Use My Location</button>
+					<p id="demo"></p>
+				</div>
+			</div>
+		</div>
+	<script>
+		var x = document.getElementById("demo");
+
+		function getLocation() {
+		    if (navigator.geolocation) {
+		       	navigator.geolocation.getCurrentPosition(showPosition, showError);
+		    } else {
+		        x.innerHTML = "Geolocation is not supported by this browser.";
+		    }
+		}
+
+		function showError(error) {
+		    switch(error.code) {
+		    	case error.PERMISSION_DENIED:
+            x.innerHTML = "User denied the request for Geolocation."
+            break;
+		        case error.POSITION_UNAVAILABLE:
+		            x.innerHTML = "Location information is unavailable."
+		            break;
+		        case error.TIMEOUT:
+		            x.innerHTML = "The request to get user location timed out."
+		            break;
+		        case error.UNKNOWN_ERROR:
+		            x.innerHTML = "An unknown error occurred."
+		            break;
+		    }
+		}
+
+		function showPosition(position){
+			positionString = position.coords.latitude + ", " + position.coords.longitude;
+			document.getElementById("locBox").value = positionString;
+		}
+	</script>
+	</body>
+</html>

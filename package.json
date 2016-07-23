@@ -1,0 +1,23 @@
+{
+  "name": "gomaphome",
+  "version": "1.0.0",
+  "description": "Front page to launch instances of PokeGoMap",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "connect": "^3.4.1",
+    "ejs": "^2.4.2",
+    "express": "^4.14.0",
+    "jade": "^1.0.4",
+    "logger": "0.0.1",
+    "morgan": "^1.7.0",
+    "nib": "^1.0.4",
+    "sqlite3": "^3.1.4",
+    "stylus": "^0.49.1"
+  }
+}
