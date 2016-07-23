@@ -1,15 +1,13 @@
 var express = require('express');
-var exec = require('child_process').exec;
+const exec = require('child_process').exec;
+var startOpts = {
+	cwd : "Pokemon"
+}
 var bodyParser = require('body-parser');
 var app = express();
 var sql = require('sqlite3').verbose();
-var db = new sql.Database("./Pokemon/pogom.db");
-
-var options = {
-	cwd: "D:\\Development\\Node Projects\\GoMapHome\\Pokemon",
-	timeout: 60 * 60 * 1000,
-	killSignal: 'SIGKILL'
-}
+var db = new sql.Database("Pokemon/pogom.db");
+var servers = [];
 
 var ejs = require('ejs');
 
@@ -22,7 +20,7 @@ app.use(bodyParser.urlencoded({ // to support URL-encoded bodies
 
 app.use(express.static(__dirname + '/public'));
 
-var ServerPort = 80;
+var ServerPort = 8080;
 
 app.get('/', function(req, res){
 	res.render('index');
@@ -51,13 +49,23 @@ app.get('/', function(req, res){
 // });
 
 app.post('/map', function(req, res){
-	console.log(req.body);
 
 	lat = req.body["location-input"].split(', ')[0];
 	lon = req.body["location-input"].split(', ')[1];
+	id = new Buffer(req.body["location-input"]).toString("base64");
 
 	console.log(lat);
 	console.log(lon);
+
+	//start the process
+	console.log('Starting server with ID ' + id);
+	var cmd = 'python runserver.py -a ptc -u pdutley -p xtsZV32SMcZj -l "' + req.body["location-input"] + '" -st 10 -ns -k AIzaSyDF6s56OydakNTp9Di6fT3WAtUY-csN5lc';
+	console.log('Server start command ' + cmd);
+	servers[id] = exec(cmd, startOpts, function(err, stout){
+		if(err){
+			console.log("Server exited with the following error " + err);
+		}
+	});
 
 	res.render('map', {
 		lat:lat,
@@ -71,11 +79,17 @@ app.get('/raw_data', function(req, res){
 	var obj = {};
 	obj.pokemons = [];
 	db.each("SELECT * FROM POKEMON where disappear_time > datetime('now')", function(err, row){
-		obj.pokemons.push(row);
+		if(!err)
+			obj.pokemons.push(row);
 	},
 	function(err){
 		res.end(JSON.stringify(obj));
 	});
 });
 
+function listServers(){
+	console.log("There are " + servers.length + " server(s) running.");
+}
+
 app.listen(ServerPort);
+setInterval(listServers, 5000);
