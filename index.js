@@ -1,13 +1,28 @@
 var express = require('express');
 const exec = require('child_process').exec;
 var startOpts = {
-	cwd : "Pokemon"
+	cwd: "Pokemon"
 }
 var bodyParser = require('body-parser');
 var app = express();
 var sql = require('sqlite3').verbose();
 var db = new sql.Database("Pokemon/pogom.db");
-var servers = [];
+global.servers = [];
+// {
+
+// 	length : 0,
+// 	list: [],
+// 	add : function(key, item){
+// 		this.list[key] = item;
+// 		this.length++;
+// 	},
+// 	remove : function(key){
+// 		this.list.forEach(function(item, index){
+// 			if(item)
+// 		})
+// 		this.length--;
+// 	}
+//};
 
 var ejs = require('ejs');
 
@@ -20,75 +35,111 @@ app.use(bodyParser.urlencoded({ // to support URL-encoded bodies
 
 app.use(express.static(__dirname + '/public'));
 
-var ServerPort = 8080;
+var ServerPort = 80;
 
-app.get('/', function(req, res){
+app.get('/', function(req, res) {
 	res.render('index');
 })
 
-// app.post('/ping', function(req, res) {
-// 	console.log('Starting Go Map at ' + req.body["location-input"]);
-// 	var host = "pandahomenet.asuscomm.com";
-// 	var ip = "192.168.1.135";
-// 	var port = getPort();
-// 	if (port != 0) {
-// 		exec('python runserver.py -a ptc -u pdutley -p xtsZV32SMcZj -l "' + req.body["location-input"] + '" -st 10 -H ' + ip + ' -P ' + port, options, function(err, stout, stderr) {
-// 			currentPort--;
-// 			if (err) {
-// 				console.log('Child process exited with error code', err.code);
-// 				return;
-// 			}
-// 			console.log("Go map exited.");
-// 			return;
-// 		});
-// 		res.end('<html><head><META http-equiv="refresh" content="5;URL=http://' + host + ':' + port + '"></head><body>Redirecting you to your Pokemon Go map in 5 Second</body></html>');
-// 	} else {
-// 		res.end("I'm sorry, the server is currently full. Please try again later.");
-// 	}
-
-// });
-
-app.post('/map', function(req, res){
-
-	lat = req.body["location-input"].split(', ')[0];
-	lon = req.body["location-input"].split(', ')[1];
-	id = new Buffer(req.body["location-input"]).toString("base64");
-
-	console.log(lat);
-	console.log(lon);
-
-	//start the process
-	console.log('Starting server with ID ' + id);
-	var cmd = 'python runserver.py -a ptc -u pdutley -p xtsZV32SMcZj -l "' + req.body["location-input"] + '" -st 10 -ns -k AIzaSyDF6s56OydakNTp9Di6fT3WAtUY-csN5lc';
-	console.log('Server start command ' + cmd);
-	servers[id] = exec(cmd, startOpts, function(err, stout){
-		if(err){
-			console.log("Server exited with the following error " + err);
+app.post('/ping', function(req, res) {
+	var count = 0;
+	var found = false;
+	id = req.body['id'];
+	console.log("Updaing session for " + id);
+	global.servers.forEach(function(item, index) {
+		if (item.pid === id) {
+			item.ping = new Date().getTime();
+			found = true;
+		}
+		count++;
+		if (global.servers.length == count) {
+			return pingResult(res, found, id);
 		}
 	});
+	return pingResult(res, found, id);
+});
+
+function pingResult(res, found, id) {
+	if (found) {
+		res.end("true");
+	} else {
+		console.log("Server not found for " + id + ". Attemting to start one.");
+		startServer(id);
+		res.end("false");
+	}
+}
+
+app.post('/map', function(req, res) {
+
+	var location = req.body["location-input"]
+	lat = location.split(', ')[0];
+	lon = location.split(', ')[1];
+	id = new Buffer(location).toString("base64");
+
+	startServer(id);
 
 	res.render('map', {
-		lat:lat,
-		lng:lon,
-		gmaps_key:"AIzaSyDF6s56OydakNTp9Di6fT3WAtUY-csN5lc",
-		lang:"en"
+		lat: lat,
+		lng: lon,
+		gmaps_key: "AIzaSyDF6s56OydakNTp9Di6fT3WAtUY-csN5lc",
+		lang: "en"
 	});
 });
 
-app.get('/raw_data', function(req, res){
+app.get('/raw_data', function(req, res) {
 	var obj = {};
 	obj.pokemons = [];
-	db.each("SELECT * FROM POKEMON where disappear_time > datetime('now')", function(err, row){
-		if(!err)
-			obj.pokemons.push(row);
-	},
-	function(err){
-		res.end(JSON.stringify(obj));
-	});
+	db.each("SELECT * FROM POKEMON where disappear_time > datetime('now')", function(err, row) {
+			if (!err)
+				obj.pokemons.push(row);
+		},
+		function(err) {
+			res.end(JSON.stringify(obj));
+		});
 });
 
-function listServers(){
-	console.log("There are " + servers.length + " server(s) running.");
+function startServer(id) {
+
+	//get the location from the id
+	var location = new Buffer(id, 'base64').toString('utf8');
+	//start the process
+	console.log('Starting server with ID ' + id);
+	var cmd = 'python runserver.py -a ptc -u pdutley -p xtsZV32SMcZj -l "' + location + '" -st 10 -ns -k AIzaSyDF6s56OydakNTp9Di6fT3WAtUY-csN5lc';
+	console.log('Server start command ' + cmd);
+	global.servers.push({
+		pid: id,
+		ping: new Date().getTime(),
+		process: exec(cmd, startOpts, function(err, stout) {
+			if (err) {
+				console.log("Server exited with the following error " + err);
+			}
+		})
+	});
+}
+
+function listServers() {
+	cur = new Date().getTime();
+	global.servers.forEach(function(item, index) {
+		console.log("Current time: " + cur + " Server expires: " + (item.ping + 15000));
+		if (item.ping + 15000 < cur) {
+			console.log("Server " + item.pid + " session has expired");
+			item.process.kill();
+			killProcess(item.process);
+			console.log(item.process);
+			global.servers.splice(index, 1);
+			return;
+		}
+	});
+	console.log("There are " + global.servers.length + " server(s) running");
+}
+
+function killProcess(ps) {
+	os = require('os');
+	if (os.platform() === 'win32') {
+		exec('taskkill /pid ' + ps.pid + ' /T /F');
+	} else {
+		ps.kill();
+	}
 }
 
 app.listen(ServerPort);
